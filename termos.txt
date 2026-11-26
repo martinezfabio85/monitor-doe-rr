@@ -1,0 +1,11 @@
+# Termos procurados no Diário Oficial do Estado de Roraima.
+# Formato:  CATEGORIA | termo
+# Acentos e maiúsculas/minúsculas são ignorados na busca.
+# Categoria "NOME" gera alerta prioritário; as demais aparecem como seção do relatório.
+
+NOME | Fábio Rodrigues Martinez
+NOME | Jardiane Morais Martinez
+
+SEPLAN | SEPLAN
+SEPLAN | Secretaria de Estado do Planejamento e Orçamento
+SEPLAN | Secretaria de Estado de Planejamento e Orçamento

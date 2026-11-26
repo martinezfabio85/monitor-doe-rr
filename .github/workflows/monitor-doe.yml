@@ -1,0 +1,65 @@
+name: Monitor DOE-RR
+
+on:
+  schedule:
+    # Horários em UTC. Boa Vista = UTC-4 → 08h, 13h e 20h de segunda a sexta.
+    - cron: "7 12 * * 1-5"
+    - cron: "7 17 * * 1-5"
+    - cron: "7 0 * * 2-6"
+  workflow_dispatch:
+    inputs:
+      alerta_sem_mencao:
+        description: "Abrir Issue mesmo sem nenhum termo encontrado? (1 = sim)"
+        default: "0"
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: monitor-doe
+  cancel-in-progress: false
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+          pip install -q -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Rodar monitor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ALERTA_SEM_MENCAO: ${{ github.event.inputs.alerta_sem_mencao || '0' }}
+        run: python monitor_doe.py
+
+      - name: Guardar PDFs baixados (30 dias)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doe-${{ github.run_id }}
+          path: |
+            pdfs/
+            debug/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Salvar estado e PDFs com seu nome
+        if: always()
+        run: |
+          git config user.name "monitor-doe"
+          git config user.email "actions@users.noreply.github.com"
+          git add estado.json 2>/dev/null || true
+          git add doe/ 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "DOE: atualização $(date -u +%F_%H%M)"
+          git push || true
