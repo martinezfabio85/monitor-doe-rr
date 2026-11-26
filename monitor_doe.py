@@ -26,7 +26,7 @@ from urllib.parse import urljoin
 import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-PORTAL = "https://www.imprensaoficial.rr.gov.br/app/_inicial/"
+PORTAL = "https://www.imprensaoficial.rr.gov.br/_inicial/"
 RAIZ = Path(__file__).resolve().parent
 ESTADO = RAIZ / "estado.json"
 TERMOS = RAIZ / "termos.txt"
@@ -71,8 +71,7 @@ def salvar_estado(estado):
 # ------------------------------------------------------------ leitura do site
 PORTAIS = [
     PORTAL,
-    "https://imprensaoficial.rr.gov.br/app/_inicial/",
-    "https://www.imprensaoficial.rr.gov.br/_inicial/",
+    "https://imprensaoficial.rr.gov.br/_inicial/",
     "https://www.imprensaoficial.rr.gov.br/",
 ]
 
