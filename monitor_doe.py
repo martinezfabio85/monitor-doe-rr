@@ -210,7 +210,7 @@ def procurar(paginas, termos):
 
 
 def numero_edicao(paginas):
-    m = re.search(r"EDI[CÇ][AÃ]O\s*N[°ºO]?\s*:?\s*(\d+)", normalizar(paginas[0] if paginas else ""))
+    m = re.search(r"EDI[CÇ][AÃ]O\s*N[°ºO]?\s*:?\s*(\d+)", normalizar(" ".join(paginas[:3])))
     return m.group(1) if m else None
 
 
