@@ -61,5 +61,6 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add estado.json 2>/dev/null || true
           git add doe/ 2>/dev/null || true
+          git add -f debug/ 2>/dev/null || true
           git diff --cached --quiet || git commit -m "DOE: atualização $(date -u +%F_%H%M)"
           git push || true

@@ -69,33 +69,84 @@ def salvar_estado(estado):
 
 
 # ------------------------------------------------------------ leitura do site
+PORTAIS = [
+    PORTAL,
+    "https://imprensaoficial.rr.gov.br/app/_inicial/",
+    "https://www.imprensaoficial.rr.gov.br/_inicial/",
+    "https://www.imprensaoficial.rr.gov.br/",
+]
+
+
+def _linhas_com_data(frame):
+    """Procura linhas de tabela (ou itens parecidos) com data dd / mm / aaaa num frame."""
+    achadas = []
+    for seletor in ("tr", "li", "div.row", "[class*=item]"):
+        loc = frame.locator(seletor)
+        try:
+            n = loc.count()
+        except Exception:  # noqa: BLE001
+            continue
+        for i in range(n):
+            el = loc.nth(i)
+            try:
+                texto = el.inner_text(timeout=3_000)
+            except Exception:  # noqa: BLE001
+                continue
+            if RE_DATA.search(texto) and "MB" in texto.upper() and len(texto) < 400:
+                achadas.append((el, texto))
+        if achadas:
+            break
+    return achadas
+
+
+def diagnostico(page):
+    print("URL:", page.url, "| título:", page.title())
+    print("Frames:", [f.url for f in page.frames])
+    try:
+        corpo = page.locator("body").inner_text(timeout=5_000)
+        print("Texto da página (início):", re.sub(r"\s+", " ", corpo)[:1500])
+    except Exception as e:  # noqa: BLE001
+        print("Sem texto:", e)
+
+
 def listar_edicoes(page):
     """Retorna [{'data': 'dd/mm/aaaa', 'chave': str, 'linha': Locator, 'href': str|None}]"""
-    page.goto(PORTAL, wait_until="networkidle", timeout=90_000)
-    try:
-        page.wait_for_selector("tr", timeout=30_000)
-    except PWTimeout:
-        pass
+    linhas = []
+    for url in PORTAIS:
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=90_000)
+            page.wait_for_load_state("networkidle", timeout=60_000)
+        except PWTimeout:
+            pass
+        except Exception as e:  # noqa: BLE001
+            print("Falha ao abrir", url, e)
+            continue
+        for _ in range(6):  # até ~30 s esperando a tabela aparecer
+            for frame in page.frames:
+                linhas = _linhas_com_data(frame)
+                if linhas:
+                    break
+            if linhas:
+                break
+            page.wait_for_timeout(5_000)
+        if linhas:
+            print("Tabela encontrada em", page.url)
+            break
+        diagnostico(page)
 
     edicoes = []
-    linhas = page.locator("tr")
-    for i in range(linhas.count()):
-        linha = linhas.nth(i)
-        texto = linha.inner_text(timeout=5_000)
+    for linha, texto in linhas:
         m = RE_DATA.search(texto)
-        if not m:
-            continue
         data = f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
         href = None
         for a in linha.locator("a[href]").all():
             h = (a.get_attribute("href") or "").strip()
             if h and not h.startswith(("#", "javascript")):
                 href = urljoin(page.url, h)
-        tamanho = re.search(r"([\d.,]+\s*MB)", texto)
+        tamanho = re.search(r"([\d.,]+\s*MB)", texto, re.I)
         chave = href or f"{data}|{tamanho.group(1) if tamanho else texto.strip()[:60]}"
         edicoes.append({"data": data, "chave": chave, "linha": linha, "href": href})
 
-    # mais recentes primeiro
     edicoes.sort(key=lambda e: datetime.strptime(e["data"], "%d/%m/%Y"), reverse=True)
     return edicoes
 
